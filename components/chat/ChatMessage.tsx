@@ -39,21 +39,25 @@ export function ChatMessage({ message }: ChatMessageProps) {
       {/* Avatar */}
       <div
         className={cn(
-          "flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-md",
+          "flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-md overflow-hidden",
           isUser
             ? "bg-primary-600 text-white font-bold"
-            : "bg-gradient-to-br from-primary-500 to-secondary-500 border-2 border-white"
+            : "bg-white border-2 border-teal-100"
         )}
       >
         {isUser ? (
           <span className="text-lg">👤</span>
         ) : (
-          <span className="text-2xl">👨‍⚖️</span>
+          <img
+            src="/logo1.png"
+            alt="Mo7ami"
+            className="w-full h-full object-cover"
+          />
         )}
       </div>
 
       {/* Message content */}
-      <div className="flex-1 max-w-3xl">
+      <div className="flex-1 max-w-4xl">
         <div
           className={cn(
             "rounded-2xl p-4 shadow-sm",
@@ -65,7 +69,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <div className="flex items-start gap-3">
             <p
               className={cn(
-                "whitespace-pre-wrap break-words flex-1",
+                "whitespace-pre-wrap break-words flex-1 leading-relaxed text-base",
                 isArabic ? "font-arabic text-right" : "text-left"
               )}
             >

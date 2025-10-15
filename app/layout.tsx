@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   description: "Educational AI-powered legal chatbot for Moroccan law. Ask questions in Arabic (Darija) or French and get authoritative answers with citations.",
   keywords: ["Morocco", "law", "legal", "chatbot", "Arabic", "French", "Darija", "محامي", "قانون"],
   authors: [{ name: "Mo7ami Team" }],
+  icons: {
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/logo1.png',
+  },
   openGraph: {
     title: "Mo7ami | محامي - Your Legal Assistant",
     description: "Educational AI-powered legal chatbot for Moroccan law",

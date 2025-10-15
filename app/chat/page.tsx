@@ -6,8 +6,11 @@ import { signIn, useSession } from "next-auth/react";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { ChatHeader } from "@/components/chat/ChatHeader";
-import { LanguageToggle } from "@/components/chat/LanguageToggle";
+import { VoiceLiveInline } from "@/components/voice/VoiceLiveInline";
+import { StreamingMessage } from "@/components/chat/StreamingMessage";
+import { ThinkingIndicator } from "@/components/chat/ThinkingIndicator";
 import { detectLanguage, getDirection, type Language } from "@/lib/utils/language";
+import { useStreamingChat } from "@/lib/hooks/useStreamingChat";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -74,6 +77,28 @@ const ROTATING_EXAMPLES: Record<Language, string[][]> = {
       "Comment résilier un bail avant son terme ?",
     ],
   ],
+  tz: [
+    [
+      "ⵎⴰ ⵉⵜⵜⵉⵏⵉ ⵓⵏⵥⴰⵕ ⵅⴼ ⵜⵓⴽⴽⵔⴹⴰ ?",
+      "ⵉⵙ ⵖⵓⵔⵉ ⴰⵣⵔⴼ ⴰⴷ ⵙⵙⵓⵜⵔⵖ ⴰⵍⴰⵢ ?",
+      "ⵎⴰⵎⴽ ⴰⴷ ⵙⵙⵔⴱⵓⵖ ⵜⴰⵙⴱⴱⴰⴱⵜ ⵜⴰⵎⴰⵢⵏⵓⵜ ?",
+    ],
+    [
+      "ⵎⴰⵏ ⴰⵢⴰ ⵉⵣⵔⴼⴰⵏ ⵏ ⵓⵎⵅⴷⴰⵎ ⴷⵉ ⵍⵎⵖⵔⵉⴱ ?",
+      "ⵎⴰⵎⴽ ⴰⴷ ⴳⵖ ⵜⴰⵎⵓⴽⵔⵉⵙⵜ ⵖⵔ ⵉⴱⵓⵍⵉⵙⵉⵢⵏ ?",
+      "ⵎⴰ ⵢⴰⴷ ⵉⴳⴰⵏ ⵓⵣⴰⵢⴰⵣ ⵅⴼ ⵓⵙⵙⵅⵙⵉ ?",
+    ],
+    [
+      "ⵎⴰⵎⴽ ⴰⴷ ⵃⴹⵓⵖ ⵜⴰⵎⴰⵜⴰⵔⵜ ⵉⵏⵓ ?",
+      "ⵎⴰ ⴰⴷ ⴳⵖ ⴱⴰⵛ ⴰⴷ ⴷⵉ ⴷⴷⵎⵖ ⵉⴷⵔⵉⵎⵏ ?",
+      "ⵎⴰ ⴰⴷ ⴳⴰⵏ ⵉⴼⵓⵍⴰⵏ ⵉ ⵜⵓⵔⴰⴳⵜ ?",
+    ],
+    [
+      "ⵎⴰⵏ ⴰⵢⴰ ⵉⵣⵔⴼⴰⵏ ⵏ ⵓⵎⵙⵙⴰⵖ ?",
+      "ⵎⴰⵎⴽ ⴰⴷ ⵙⵙⵓⵜⵜⵔⵖ ⴰⵍⴰⵢ ?",
+      "ⵎⴰ ⵢⴰⴷ ⵉⴳⴰⵏ ⵓⵏⵥⴰⵕ ⵅⴼ ⵜⵡⵓⵔⵉ ?",
+    ],
+  ],
 };
 
 export default function ChatPage() {
@@ -92,6 +117,77 @@ export default function ChatPage() {
   const isArabic = language === "ar";
   const router = useRouter();
   const [processedPrompt, setProcessedPrompt] = useState<string | null>(null);
+
+  // Streaming state
+  const [streamingMessage, setStreamingMessage] = useState<{
+    content: string;
+    citations: any[];
+    isComplete: boolean;
+  } | null>(null);
+
+  // Streaming chat hook
+  const streaming = useStreamingChat({
+    apiUrl: process.env.NEXT_PUBLIC_API_URL,
+    onStreamStart: () => {
+      console.log("Stream started");
+    },
+    onChunk: (chunk) => {
+      // Update streaming message content
+      setStreamingMessage(prev => ({
+        content: (prev?.content || "") + chunk,
+        citations: prev?.citations || [],
+        isComplete: false,
+      }));
+    },
+    onComplete: (fullText, citations, metadata) => {
+      // Mark streaming as complete
+      setStreamingMessage(prev => ({
+        content: fullText,
+        citations,
+        isComplete: true,
+      }));
+
+      // Add completed message to chat history
+      const assistantMessage: Message = {
+        id: `msg-${Date.now()}-assistant`,
+        role: "assistant",
+        content: fullText,
+        language: detectLanguage(fullText),
+        citations,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+
+      // Update conversation metadata
+      setConversationId(metadata.conversation_id);
+      setUsage({
+        remaining: metadata.remaining_questions,
+        limit: metadata.daily_limit,
+      });
+      setUsageError(null);
+
+      // Clear streaming state
+      setTimeout(() => {
+        setStreamingMessage(null);
+      }, 100);
+    },
+    onError: (error) => {
+      console.error("Streaming error:", error);
+      setStreamingMessage(null);
+
+      const errorMessage: Message = {
+        id: `msg-${Date.now()}-error`,
+        role: "assistant",
+        content:
+          language === "ar"
+            ? "عذراً، حدث خطأ. الرجاء المحاولة مرة أخرى."
+            : "Désolé, une erreur s'est produite. Veuillez réessayer.",
+        language,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    },
+  });
 
   // Ensure a persistent client token for anonymous usage tracking
   useEffect(() => {
@@ -222,9 +318,20 @@ export default function ChatPage() {
       };
       setMessages((prev) => [...prev, userMessage]);
 
-      sendMessageMutation.mutate({ content, voice });
+      // Clear any previous streaming message
+      setStreamingMessage(null);
+
+      // Use streaming API
+      streaming.sendMessage({
+        message: content,
+        language: detectLanguage(content),
+        conversationId,
+        voiceInput: voice,
+        userId: session?.user?.id ?? null,
+        clientToken,
+      });
     },
-    [clientToken, usage?.remaining, session?.user?.id, isArabic, sendMessageMutation]
+    [clientToken, usage?.remaining, session?.user?.id, isArabic, streaming, conversationId, session?.user?.id]
   );
 
   const handleVoiceInput = (transcript: string) => {
@@ -279,7 +386,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50" dir={direction}>
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/20" dir={direction}>
       {/* Main chat area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
@@ -296,8 +403,8 @@ export default function ChatPage() {
           showHistory={isSidebarOpen}
         />
 
-        {/* Messages area */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+        {/* Messages area - More compact */}
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
           <div className="max-w-4xl mx-auto">
             {messages.length === 0 ? (
               <EmptyState language={language} onExampleClick={handleSendMessage} />
@@ -306,7 +413,24 @@ export default function ChatPage() {
                 {messages.map((message) => (
                   <ChatMessage key={message.id} message={message} />
                 ))}
-                {sendMessageMutation.isPending && (
+
+                {/* Show thinking indicator while preparing */}
+                {streaming.isPreparing && (
+                  <ThinkingIndicator language={language} />
+                )}
+
+                {/* Show streaming message while streaming or complete */}
+                {streamingMessage && streaming.isStreaming && (
+                  <StreamingMessage
+                    content={streamingMessage.content}
+                    language={language}
+                    isComplete={streamingMessage.isComplete}
+                    citations={streamingMessage.citations}
+                  />
+                )}
+
+                {/* Fallback to old loading message for mutation-based requests */}
+                {sendMessageMutation.isPending && !streaming.isPreparing && !streaming.isStreaming && (
                   <LoadingMessage language={language} />
                 )}
               </>
@@ -315,17 +439,17 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Input area */}
-        <div className="border-t bg-white">
-          <div className="max-w-4xl mx-auto px-4 py-4">
+        {/* Input area - Compact & Elegant */}
+        <div className="border-t border-gray-200/50 glass-card">
+          <div className="max-w-4xl mx-auto px-3 py-2.5">
             {!session?.user?.id && (
-              <div className="mb-3 rounded-xl bg-teal-50 px-4 py-3 text-sm text-teal-800">
+              <div className="mb-2 rounded-lg bg-gradient-to-r from-teal-50 to-teal-50/50 px-3 py-2 text-xs text-teal-800 border border-teal-200/50">
                 {isArabic
-                  ? "لديك خمس أسئلة مجانية يومياً دون تسجيل. سجّل الدخول لتحصل على عشرة أسئلة كل يوم."
-                  : "Profitez de cinq questions gratuites par jour sans compte. Connectez-vous pour en obtenir dix."}
+                  ? "خمس أسئلة مجانية يومياً. سجّل الدخول للحصول على عشرة."
+                  : "Cinq questions gratuites par jour. Connectez-vous pour dix."}
                 <button
                   onClick={() => signIn("google")}
-                  className="ml-3 rounded-full bg-teal-600 px-3 py-1 text-xs text-white hover:bg-teal-700"
+                  className="ml-2 rounded-lg bg-teal-600 px-2.5 py-1 text-[10px] text-white hover:bg-teal-700 transition-colors"
                 >
                   {isArabic ? "تسجيل الدخول" : "Se connecter"}
                 </button>
@@ -333,36 +457,35 @@ export default function ChatPage() {
             )}
 
             {usageError && (
-              <div className="mb-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              <div className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 border border-amber-200/50">
                 {usageError}
               </div>
             )}
 
             {usage && usage.remaining >= 0 && (
-              <div className="mb-2 text-xs text-gray-500">
+              <div className="mb-1 text-[10px] text-gray-500 flex items-center gap-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-600"></span>
                 {isArabic
-                  ? `الأسئلة المتبقية لليوم: ${usage.remaining} / ${usage.limit}`
-                  : `Questions restantes aujourd'hui : ${usage.remaining} / ${usage.limit}`}
+                  ? `المتبقية: ${usage.remaining} / ${usage.limit}`
+                  : `Restantes: ${usage.remaining} / ${usage.limit}`}
               </div>
             )}
 
-            <div className="flex items-center gap-2 mb-2">
-              <LanguageToggle
-                language={language}
-                onChange={setLanguage}
-              />
-              <span className="text-xs text-gray-500">
-                {language === "ar"
-                  ? "يتم اكتشاف اللغة تلقائياً"
-                  : "Détection automatique de la langue"}
-              </span>
-            </div>
             <ChatInput
               onSendMessage={handleSendMessage}
               onVoiceInput={handleVoiceInput}
               language={language}
               disabled={sendMessageMutation.isPending || usage?.remaining === 0}
             />
+
+            {/* Voice Live Inline - NEW! */}
+            <div className="mt-2.5">
+              <VoiceLiveInline
+                language={language}
+                apiKey={process.env.NEXT_PUBLIC_OPENAI_API_KEY || ""}
+                onTranscript={handleVoiceInput}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -403,23 +526,31 @@ function EmptyState({ language, onExampleClick }: { language: Language; onExampl
   const currentExamples = exampleSets[setIndex] ?? [];
 
   return (
-    <div className="text-center py-12">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-primary-900 mb-2">
+    <div className="text-center py-8">
+      <div className="mb-6">
+        {/* Compact Logo */}
+        <div className="flex justify-center mb-4">
+          <img
+            src="/logo1.png"
+            alt="Mo7ami Logo"
+            className="w-24 h-24 object-contain"
+          />
+        </div>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent mb-2">
           {language === "ar" ? "محامي" : "Mo7ami"}
         </h1>
-        <p className="text-xl text-gray-600 font-arabic">
+        <p className="text-lg text-teal-700 font-semibold">
           {language === "ar"
             ? "مساعدك القانوني الذكي"
             : "Votre assistant juridique intelligent"}
         </p>
       </div>
 
-      <div className="space-y-4">
-        <p className="text-gray-700 font-medium">
+      <div className="space-y-3">
+        <p className="text-sm text-gray-700 font-medium">
           {language === "ar" ? "أمثلة على الأسئلة:" : "Exemples de questions:"}
         </p>
-        <div className="grid gap-3 max-w-2xl mx-auto overflow-hidden">
+        <div className="grid gap-2 max-w-2xl mx-auto overflow-hidden">
           {currentExamples.map((example, i) => (
             <div
               key={`${setIndex}-${i}`}
@@ -433,22 +564,22 @@ function EmptyState({ language, onExampleClick }: { language: Language; onExampl
                 }
               }}
               className={cn(
-                "p-4 bg-white rounded-lg border border-gray-200 hover:border-primary-500 hover:shadow-md transition-all cursor-pointer transform",
-                "hover:scale-105 active:scale-95 duration-300",
-                transitioning ? "translate-y-4 opacity-0" : "translate-y-0 opacity-100"
+                "glass-card p-3 hover:bg-white/90 hover:border-teal-500/30 transition-all cursor-pointer transform group",
+                "hover:scale-[1.02] active:scale-[0.98] duration-200",
+                transitioning ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"
               )}
             >
-              <p className="text-gray-700">{example}</p>
+              <p className="text-sm text-gray-700 group-hover:text-teal-700 transition-colors">{example}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-2xl mx-auto">
-        <p className="text-sm text-gray-700">
+      <div className="mt-6 p-3 bg-gradient-to-r from-yellow-50 to-yellow-50/50 border border-yellow-200/50 rounded-lg max-w-2xl mx-auto">
+        <p className="text-xs text-gray-700">
           {language === "ar"
-            ? "💡 نصيحة: يمكنك استخدام الصوت أو الكتابة للسؤال"
-            : "💡 Conseil: Vous pouvez utiliser la voix ou le texte pour poser vos questions"}
+            ? "💡 يمكنك استخدام الصوت أو الكتابة للسؤال"
+            : "💡 Utilisez la voix ou le texte pour poser vos questions"}
         </p>
       </div>
     </div>
@@ -458,8 +589,12 @@ function EmptyState({ language, onExampleClick }: { language: Language; onExampl
 function LoadingMessage({ language }: { language: Language }) {
   return (
     <div className="flex items-start gap-3 animate-fade-in">
-      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-        <span className="text-primary-600 font-bold">م</span>
+      <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white border-2 border-teal-100 flex items-center justify-center overflow-hidden shadow-md">
+        <img
+          src="/logo1.png"
+          alt="Mo7ami"
+          className="w-full h-full object-cover"
+        />
       </div>
       <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm">
         <div className="flex items-center gap-2">

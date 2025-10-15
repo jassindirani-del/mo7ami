@@ -52,9 +52,9 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={isArabic ? "rtl" : "ltr"}>
+    <div className="min-h-screen bg-gray-50 pb-8" dir={isArabic ? "rtl" : "ltr"}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
+      <header className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/chat" className="text-primary-600 hover:text-primary-700">
             ← {isArabic ? "العودة إلى المحادثة" : "Retour au chat"}
@@ -66,10 +66,10 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-4 sm:p-5 md:p-6">
         {/* User Info */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center gap-4">
+        <div className="bg-white rounded-lg shadow-sm p-5 mb-5">
+          <div className="flex items-center gap-3">
             {session.user.image ? (
               <img
                 src={session.user.image}
@@ -91,7 +91,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Language Preference */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-5 mb-5">
           <div className="flex items-center gap-3 mb-4">
             <Globe className="w-6 h-6 text-primary-600" />
             <h3 className={cn("text-xl font-bold", isArabic && "font-arabic")}>
@@ -125,7 +125,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Voice Settings */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-5 mb-5">
           <div className="flex items-center gap-3 mb-4">
             <Volume2 className="w-6 h-6 text-primary-600" />
             <h3 className={cn("text-xl font-bold", isArabic && "font-arabic")}>
@@ -210,7 +210,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Theme (Coming Soon) */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6 opacity-50">
+        <div className="bg-white rounded-lg shadow-sm p-5 mb-5 opacity-50">
           <div className="flex items-center gap-3 mb-4">
             <Moon className="w-6 h-6 text-primary-600" />
             <h3 className={cn("text-xl font-bold", isArabic && "font-arabic")}>
@@ -226,7 +226,7 @@ export default function ProfilePage() {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full py-3 px-6 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-bold text-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full py-2.5 px-5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-bold text-base md:text-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isSaving ? (
             <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />

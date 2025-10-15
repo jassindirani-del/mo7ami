@@ -8,14 +8,17 @@ from typing import List, Optional, Tuple
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+import json
 
 from app.core.database import get_db
 from app.models import Conversation, Message, QueryAnalytics
-from app.services.generation import generate_answer
+from app.services.generation import generate_answer, extract_citations
+from app.services.generation_stream import generate_answer_stream
 from app.services.retrieval import retrieve_relevant_documents
 
 router = APIRouter()
@@ -177,6 +180,142 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
         )
         logger.exception("Chat processing failed: %s", error)
         raise HTTPException(status_code=500, detail="Failed to process request")
+
+
+@router.post("/stream")
+async def chat_stream(request: ChatRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Streaming chat endpoint - returns Server-Sent Events with real-time text generation
+    """
+    query_language = request.language or "ar"
+    user_id = request.user_id
+    client_token = request.client_token or user_id
+
+    if not client_token:
+        raise HTTPException(status_code=400, detail="Missing client identifier")
+
+    logger.info(
+        "Received streaming chat request in %s for user %s / client %s: %s...",
+        query_language,
+        user_id or "anonymous",
+        client_token,
+        request.message[:80],
+    )
+
+    process_start = perf_counter()
+    limit, remaining_before = await _check_usage_limit(
+        db=db,
+        user_id=user_id,
+        client_token=client_token,
+    )
+
+    conversation = await _resolve_conversation(
+        db=db,
+        conversation_id=request.conversation_id,
+        user_id=user_id,
+        client_token=client_token,
+        language=query_language,
+    )
+
+    async def event_stream():
+        """Generate Server-Sent Events stream"""
+        try:
+            # Save user message
+            user_message = Message(
+                id=str(uuid4()),
+                conversation_id=conversation.id,
+                role="user",
+                content=request.message.strip(),
+                language=query_language,
+                citations=None,
+                voice_used=request.voice_input,
+            )
+            db.add(user_message)
+            await db.flush()
+
+            # Retrieve relevant documents
+            relevant_docs = await retrieve_relevant_documents(
+                db=db,
+                query=request.message,
+                language=query_language,
+                top_k=5,
+            )
+
+            # Send citations first
+            citations = extract_citations(relevant_docs)
+            yield f"data: {json.dumps({'type': 'citations', 'data': citations})}\n\n"
+
+            # Send metadata
+            remaining_after = max(remaining_before - 1, 0)
+            yield f"data: {json.dumps({'type': 'metadata', 'data': {'conversation_id': conversation.id, 'remaining_questions': remaining_after, 'daily_limit': limit}})}\n\n"
+
+            # Stream the answer
+            full_answer = ""
+            async for chunk in generate_answer_stream(
+                query=request.message,
+                documents=relevant_docs,
+                language=query_language,
+            ):
+                full_answer += chunk
+                yield f"data: {json.dumps({'type': 'content', 'data': chunk})}\n\n"
+
+            # Save assistant message
+            assistant_message = Message(
+                id=str(uuid4()),
+                conversation_id=conversation.id,
+                role="assistant",
+                content=full_answer,
+                language=query_language,
+                citations=citations,
+                voice_used=False,
+            )
+            db.add(assistant_message)
+
+            processing_time = perf_counter() - process_start
+            await _record_analytics(
+                db,
+                query=request.message,
+                language=query_language,
+                duration_seconds=processing_time,
+                voice_used=request.voice_input,
+                successful=True,
+                user_id=user_id,
+                client_token=client_token,
+            )
+
+            # Send completion event
+            yield f"data: {json.dumps({'type': 'done', 'data': {'processing_time': processing_time}})}\n\n"
+
+            logger.info(
+                "Streamed response to conversation %s in %.2fs with %s citations",
+                conversation.id,
+                processing_time,
+                len(citations),
+            )
+
+        except Exception as error:
+            await _record_analytics(
+                db,
+                query=request.message,
+                language=query_language,
+                duration_seconds=perf_counter() - process_start,
+                voice_used=request.voice_input,
+                successful=False,
+                user_id=user_id,
+                client_token=client_token,
+            )
+            logger.exception("Streaming chat processing failed: %s", error)
+            yield f"data: {json.dumps({'type': 'error', 'data': 'Failed to process request'})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
+    )
 
 
 @router.get("/history")

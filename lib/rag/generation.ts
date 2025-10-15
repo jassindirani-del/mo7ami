@@ -193,10 +193,12 @@ async function generateAnswerWithContext(
   context: string,
   language: Language
 ): Promise<string> {
-  const systemPrompt = SYSTEM_PROMPTS[language];
+  // Default tz (Tamazight) to ar for system prompts
+  const promptLanguage = language === 'tz' ? 'ar' : language;
+  const systemPrompt = SYSTEM_PROMPTS[promptLanguage as 'ar' | 'fr'];
 
   const userPrompt =
-    language === 'ar'
+    (language === 'ar' || language === 'tz')
       ? `السياق القانوني:\n\n${context}\n\n---\n\nالسؤال: ${query}\n\nأجب بناءً على النصوص القانونية المقدمة فقط. إذا لم يكن السياق كافياً، اذكر ذلك.`
       : `Contexte juridique:\n\n${context}\n\n---\n\nQuestion: ${query}\n\nRéponds en te basant uniquement sur les textes fournis. Si le contexte n'est pas suffisant, indique-le.`;
 

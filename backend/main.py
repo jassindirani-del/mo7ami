@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from loguru import logger
 import sys
 
-from app.api import chat, voice, documents
+from app.api import chat, voice, documents, realtime
 from app.core.config import settings
 from app.core.database import init_db
 
@@ -86,6 +86,7 @@ async def health_check():
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["Chat"])
 app.include_router(voice.router, prefix="/api/v1/voice", tags=["Voice"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
+app.include_router(realtime.router, prefix="/api/v1/realtime", tags=["Realtime Voice"])
 
 
 if __name__ == "__main__":

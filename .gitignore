@@ -54,3 +54,7 @@ backend/.env
 # Database
 *.db
 *.sqlite
+
+# Production secrets - NEVER commit
+.env.production.local
+*.key

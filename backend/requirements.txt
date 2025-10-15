@@ -12,15 +12,16 @@ asyncpg==0.29.0
 pgvector==0.2.4
 
 # OpenAI and LangChain
-openai==1.12.0
+openai[realtime]>=1.99.2  # Realtime API support with WebSocket client
 langchain==0.1.6
 langchain-community==0.0.20
 langchain-openai==0.0.5
-tiktoken==0.6.0
+tiktoken==0.5.2
+websockets==12.0  # Additional WebSocket utilities
 
 # Vector Store and Embeddings
 sentence-transformers==2.3.1
-faiss-cpu==1.7.4
+faiss-cpu==1.8.0
 chromadb==0.4.22
 
 # Voice Processing (100% OpenAI)
@@ -29,6 +30,7 @@ chromadb==0.4.22
 # azure-cognitiveservices-speech==1.34.1  # Not implemented
 pydub==0.25.1  # Audio processing for Whisper optimization
 ffmpeg-python==0.2.0  # Audio codec support
+faster-whisper==1.0.3  # Local/free STT engine
 
 # Arabic Text Processing
 arabic-reshaper==3.0.0
@@ -56,6 +58,6 @@ celery==5.3.6
 loguru==0.7.2
 
 # Testing
-pytest==8.0.0
+pytest==7.4.4
 pytest-asyncio==0.23.4
 httpx==0.26.0

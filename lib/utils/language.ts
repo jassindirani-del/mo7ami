@@ -1,6 +1,10 @@
-export type Language = "ar" | "fr";
+export type Language = "ar" | "fr" | "tz";
 
 export function detectLanguage(text: string): Language {
+  // Check for Tifinagh/Tamazight characters
+  const tifinaqhPattern = /[\u2D30-\u2D7F]/;
+  const hasTifinagh = tifinaqhPattern.test(text);
+
   // Check for Arabic characters (including Darija which uses Arabic script)
   const arabicPattern = /[\u0600-\u06FF]/;
   const hasArabic = arabicPattern.test(text);
@@ -9,7 +13,10 @@ export function detectLanguage(text: string): Language {
   const latinPattern = /[a-zA-ZÀ-ÿ]/;
   const hasLatin = latinPattern.test(text);
 
-  // If both exist, count occurrences
+  // Priority: Tifinagh > Arabic > French
+  if (hasTifinagh) return "tz";
+
+  // If both Arabic and Latin exist, count occurrences
   if (hasArabic && hasLatin) {
     const arabicCount = (text.match(/[\u0600-\u06FF]/g) || []).length;
     const latinCount = (text.match(/[a-zA-ZÀ-ÿ]/g) || []).length;
@@ -25,5 +32,13 @@ export function getDirection(language: Language): "rtl" | "ltr" {
 }
 
 export function getLanguageLabel(language: Language): string {
-  return language === "ar" ? "العربية" : "Français";
+  switch (language) {
+    case "ar":
+      return "العربية";
+    case "tz":
+      return "ⵜⴰⵎⴰⵣⵉⵖⵜ";
+    case "fr":
+    default:
+      return "Français";
+  }
 }

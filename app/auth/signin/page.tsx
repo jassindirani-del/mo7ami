@@ -18,24 +18,26 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full p-8">
-        <div className="text-center mb-8">
-          {/* Logo */}
-          <div className="mb-6 flex justify-center">
-            <div className="w-20 h-20 bg-white rounded-2xl shadow-xl border border-gray-200 flex items-center justify-center">
-              <svg className="w-12 h-12 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-              </svg>
+    <div className="min-h-screen flex items-start justify-center bg-gray-50 py-10">
+      <div className="max-w-md w-full p-6 md:p-8">
+        <div className="text-center mb-6">
+          {/* Mo7ami Logo - Real Logo Instead of SVG */}
+          <div className="mb-5 flex justify-center">
+            <div className="w-28 h-28 md:w-32 md:h-32 bg-white rounded-2xl shadow-xl border-2 border-teal-100 flex items-center justify-center overflow-hidden p-2">
+              <img
+                src="/logo1.png"
+                alt="Mo7ami Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">محامي Mo7ami</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-1.5">محامي Mo7ami</h1>
           <p className="text-gray-600">مساعدك القانوني الذكي</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">
+        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-7">
+          <h2 className="text-xl font-semibold text-gray-800 mb-5 text-center">
             تسجيل الدخول
           </h2>
 
@@ -70,7 +72,7 @@ export default function SignInPage() {
             <span>{isLoading ? "جاري التحميل..." : "تسجيل الدخول بواسطة Google"}</span>
           </button>
 
-          <div className="mt-6 text-center">
+          <div className="mt-5 text-center">
             <p className="text-sm text-gray-600">
               ليس لديك حساب؟ سيتم إنشاؤه تلقائياً عند تسجيل الدخول
             </p>
@@ -78,7 +80,7 @@ export default function SignInPage() {
         </div>
 
         {/* Anonymous Access */}
-        <div className="mt-6 text-center">
+        <div className="mt-5 text-center">
           <p className="text-sm text-gray-600 mb-3">أو</p>
           <Link
             href="/chat"
@@ -89,7 +91,7 @@ export default function SignInPage() {
         </div>
 
         {/* Legal Disclaimer */}
-        <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-xs text-gray-700 text-center">
             بتسجيل الدخول، أنت توافق على{" "}
             <Link href="/privacy" className="underline text-teal-700">
@@ -103,7 +105,7 @@ export default function SignInPage() {
         </div>
 
         {/* Back to Home */}
-        <div className="mt-6 text-center">
+        <div className="mt-5 text-center">
           <Link href="/" className="text-sm text-gray-600 hover:text-teal-700">
             ← العودة إلى الصفحة الرئيسية
           </Link>

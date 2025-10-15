@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     AZURE_SPEECH_KEY: str = ""
     AZURE_SPEECH_REGION: str = ""
 
+    # Voice / Speech-to-Text
+    VOICE_STT_PROVIDER: str = "faster-whisper"  # Options: faster-whisper, openai
+    VOICE_STT_MODEL_SIZE: str = "base"
+    VOICE_STT_DEVICE: str = "cpu"
+    VOICE_STT_COMPUTE_TYPE: str = "int8"  # int8/int16/float16/float32 depending on hardware
+    VOICE_STT_TIMEOUT_SECONDS: int = 15
+
     # Vector Store Configuration
     VECTOR_DIMENSION: int = 1536
     MAX_CONTEXT_LENGTH: int = 4096
