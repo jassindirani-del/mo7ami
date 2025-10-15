@@ -1,4 +1,4 @@
-# Mo7ami (محامي) - Your Intelligent Legal Assistant for Moroccan Law
+# Mo7ami AI (محامي) - Your artificial Intelligent Legal Assistant for Moroccan Law
 
 <div align="center">
 
@@ -28,7 +28,7 @@ Access to legal information in Morocco faces several challenges:
 
 ## 💡 Our Mission
 
-**Mo7ami (محامي)** bridges this gap by providing:
+**Mo7ami AI (محامي)** bridges this gap by providing:
 
 ✅ **Free Access** to accurate legal information
 ✅ **Darija Support** - Understanding law in your daily language
